@@ -42,3 +42,4 @@ issues:
       linters:
         - gosec
         - noctx
+        - wrapcheck
