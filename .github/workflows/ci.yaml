@@ -20,13 +20,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup go
-        run: |
-          curl -sL https://raw.githubusercontent.com/maxatome/install-go/v3.4/install-go.pl |
-              perl - ${{ matrix.go-version }} $HOME/go
-
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '${{ matrix.go-version }}' # The Go version to download (if necessary) and use.
+#    - run: go version
+#      - name: Setup go
+#        run: |
+#          curl -sL https://raw.githubusercontent.com/maxatome/install-go/v3.4/install-go.pl |
+#              perl - ${{ matrix.go-version }} $HOME/go
 
       - name: Linting
         if: matrix.lint-and-coverage
@@ -50,5 +52,5 @@ jobs:
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          go install github.com/mattn/goveralls@v0.0.11
+          go install github.com/mattn/goveralls@latest
           goveralls -coverprofile=coverage.out -service=github
