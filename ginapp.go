@@ -1,7 +1,8 @@
-package appengine
+package ginapp
 
 import (
 	"errors"
+	//"errors"
 	"fmt"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
@@ -108,7 +109,7 @@ func setupLogger(configuration GinAppConfig) (*zap.SugaredLogger, error) {
 
 	logger, err := loggerConfig.Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error building logger: %w", err)
 	}
 
 	return logger.Sugar(), nil
@@ -123,7 +124,12 @@ func (app *GinApp) Start() error {
 	port := app.config.GetServerConfig().Port
 	address := fmt.Sprintf("localhost:%d", port)
 
-	return app.ginEngine.Run(address)
+	err := app.ginEngine.Run(address)
+	if err != nil {
+		return fmt.Errorf("application error: %w", err)
+	}
+
+	return nil
 }
 
 func (app *GinApp) StartAsync() *http.Server {
@@ -141,8 +147,9 @@ func (app *GinApp) StartAsync() *http.Server {
 	app.logger.Infow("Configuring http listener", "addr", "localhost", "port", port)
 
 	srv := &http.Server{
-		Addr:    address,
-		Handler: app.ginEngine,
+		Addr:              address,
+		Handler:           app.ginEngine,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	go func() {
