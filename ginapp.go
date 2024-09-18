@@ -20,8 +20,11 @@ type GinAppConfig interface {
 }
 
 type ServerConfig struct {
-	Port int `json:"port,omitempty"`
+	Port            int    `json:"port,omitempty"`
+	HealthcheckPath string `json:"healthcheck_path,omitempty"`
 }
+
+const DefaultHealthcheckPath = "/health"
 
 type LogConfig struct {
 	Level  LogLevel  `json:"level,omitempty"`
@@ -63,17 +66,7 @@ func New(configuration GinAppConfig, configure func(*gin.Engine, *zap.SugaredLog
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	ginEngine := gin.New()
-
-	ginEngine.Use(ginzap.Ginzap(logger.Desugar(), time.RFC3339, true))
-	ginEngine.Use(ginzap.RecoveryWithZap(logger.Desugar(), true))
-	ginEngine.Use(
-		func(context *gin.Context) {
-			context.Set("logger", logger.With("request_id", uuid.New().String()))
-			context.Set("config", configuration)
-			context.Next()
-		},
-	)
+	ginEngine := setupGinEngine(configuration, logger)
 
 	err = configure(ginEngine, logger)
 	if err != nil {
@@ -113,6 +106,35 @@ func setupLogger(configuration GinAppConfig) (*zap.SugaredLogger, error) {
 	}
 
 	return logger.Sugar(), nil
+}
+
+func setupGinEngine(configuration GinAppConfig, logger *zap.SugaredLogger) *gin.Engine {
+	ginEngine := gin.New()
+
+	healthcheckPath := configuration.GetServerConfig().HealthcheckPath
+	if healthcheckPath == "" {
+		healthcheckPath = DefaultHealthcheckPath
+	}
+	ginEngine.Use(ginzap.GinzapWithConfig(logger.Desugar(), &ginzap.Config{
+		TimeFormat: time.RFC3339,
+		UTC:        true,
+		SkipPaths:  []string{healthcheckPath},
+	}))
+	ginEngine.Use(ginzap.RecoveryWithZap(logger.Desugar(), true))
+	ginEngine.Use(
+		func(context *gin.Context) {
+			context.Set("logger", logger.With("request_id", uuid.New().String()))
+			context.Set("config", configuration)
+			context.Next()
+		},
+	)
+
+	ginEngine.GET(healthcheckPath, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+		})
+	})
+	return ginEngine
 }
 
 func (app *GinApp) Start() error {
