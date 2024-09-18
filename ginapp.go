@@ -1,4 +1,4 @@
-package appengine
+package ginapp
 
 import (
 	"errors"
