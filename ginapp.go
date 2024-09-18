@@ -7,6 +7,7 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/penglongli/gin-metrics/ginmetrics"
 	"go.uber.org/zap"
 	"log"
 	"net"
@@ -22,6 +23,7 @@ type GinAppConfig interface {
 type ServerConfig struct {
 	Port            int    `json:"port,omitempty"`
 	HealthcheckPath string `json:"healthcheck_path,omitempty"`
+	MetricsEnabled  bool   `json:"enable_metrics,omitempty"`
 }
 
 const DefaultHealthcheckPath = "/health"
@@ -44,8 +46,8 @@ const (
 type LogFormat string
 
 const (
-	LogJson    LogFormat = "console"
-	LogConsole LogFormat = "json"
+	LogJson    LogFormat = "json"
+	LogConsole LogFormat = "console"
 )
 
 type GinApp struct {
@@ -54,24 +56,31 @@ type GinApp struct {
 	ginEngine *gin.Engine
 }
 
-func New(configuration GinAppConfig, configure func(*gin.Engine, *zap.SugaredLogger) error) (*GinApp, error) {
-	logger, err := setupLogger(configuration)
+type Setups interface {
+	ConfigureGinEngine(*gin.Engine, *zap.SugaredLogger) error
+	ConfigureMetrics(*ginmetrics.Monitor) error
+}
+
+func New(configuration GinAppConfig, setups Setups) (*GinApp, error) {
+	logConfiguration := configuration.GetLogConfig()
+	if logConfiguration == nil {
+		logConfiguration = &LogConfig{
+			Level:  LogInfo,
+			Format: LogConsole,
+		}
+	}
+	logger, err := setupLogger(logConfiguration)
 	if err != nil {
 		return nil, err
 	}
 
-	if configuration.GetLogConfig().Level == LogDebug {
+	if logConfiguration.Level == LogDebug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	ginEngine := setupGinEngine(configuration, logger)
-
-	err = configure(ginEngine, logger)
-	if err != nil {
-		return nil, err
-	}
+	ginEngine, _ := setupGinEngine(configuration, setups, logger)
 
 	return &GinApp{
 		config:    configuration,
@@ -80,16 +89,15 @@ func New(configuration GinAppConfig, configure func(*gin.Engine, *zap.SugaredLog
 	}, nil
 }
 
-func setupLogger(configuration GinAppConfig) (*zap.SugaredLogger, error) {
-	logConfiguration := configuration.GetLogConfig()
-	if logConfiguration.Level == LogNone {
+func setupLogger(configuration *LogConfig) (*zap.SugaredLogger, error) {
+	if configuration.Level == LogNone {
 		return zap.NewNop().Sugar(), nil
 	}
 
 	loggerConfig := zap.NewProductionConfig()
-	loggerConfig.Encoding = string(logConfiguration.Format)
+	loggerConfig.Encoding = string(configuration.Format)
 
-	switch logConfiguration.Level {
+	switch configuration.Level {
 	case LogDebug:
 		loggerConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	case LogInfo:
@@ -108,7 +116,7 @@ func setupLogger(configuration GinAppConfig) (*zap.SugaredLogger, error) {
 	return logger.Sugar(), nil
 }
 
-func setupGinEngine(configuration GinAppConfig, logger *zap.SugaredLogger) *gin.Engine {
+func setupGinEngine(configuration GinAppConfig, setups Setups, logger *zap.SugaredLogger) (*gin.Engine, error) {
 	ginEngine := gin.New()
 
 	healthcheckPath := configuration.GetServerConfig().HealthcheckPath
@@ -134,7 +142,33 @@ func setupGinEngine(configuration GinAppConfig, logger *zap.SugaredLogger) *gin.
 			"status": "ok",
 		})
 	})
-	return ginEngine
+
+	if setups != nil {
+		if configuration.GetServerConfig().MetricsEnabled {
+			err := setupMetrics(ginEngine, setups.ConfigureMetrics)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err := setups.ConfigureGinEngine(ginEngine, logger)
+		if err != nil {
+			return nil, fmt.Errorf("error configuring gin engine: %w", err)
+		}
+	}
+
+	return ginEngine, nil
+}
+
+func setupMetrics(ginEngine *gin.Engine, configure func(*ginmetrics.Monitor) error) error {
+	monitor := ginmetrics.GetMonitor()
+	monitor.SetMetricPath("/metrics")
+	err := configure(monitor)
+	if err != nil {
+		return err
+	}
+	monitor.Use(ginEngine)
+	return nil
 }
 
 func (app *GinApp) Start() error {
