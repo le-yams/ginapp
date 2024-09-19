@@ -14,7 +14,6 @@ type ServerConfig struct {
 	Mode            string         `json:"mode,omitempty"`
 	Port            int            `json:"port,omitempty"`
 	HealthcheckPath string         `json:"healthcheck_path,omitempty"`
-	MetricsEnabled  bool           `json:"enable_metrics,omitempty"`
 	Metrics         *MetricsConfig `json:"metrics,omitempty"`
 }
 
