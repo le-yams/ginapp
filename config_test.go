@@ -9,32 +9,36 @@ import (
 
 func TestDefaultServerConfig(t *testing.T) {
 	t.Parallel()
+	t.Run("default server configuration", func(t *testing.T) {
+		t.Parallel()
+		serverConfig := defaultServerConfig()
 
-	serverConfig := defaultServerConfig()
+		assert := assertions.New(t)
+		assert.Equal(0, serverConfig.Port)
+		assert.Equal(gin.ReleaseMode, serverConfig.Mode)
+		assert.Equal("/health", serverConfig.HealthcheckPath)
 
-	assert := assertions.New(t)
-	assert.Equal(0, serverConfig.Port)
-	assert.Equal(gin.ReleaseMode, serverConfig.Mode)
-	assert.Equal("/health", serverConfig.HealthcheckPath)
+		metrics := serverConfig.Metrics
+		require.NotNil(t, metrics)
+		assert.False(metrics.Enabled)
+		assert.Equal("/metrics", metrics.Path)
+	})
 
-	metrics := serverConfig.Metrics
-	require.NotNil(t, metrics)
-	assert.False(metrics.Enabled)
-	assert.Equal("/metrics", metrics.Path)
-}
+	t.Run("default healthcheck path", func(t *testing.T) {
+		t.Parallel()
+		assert := assertions.New(t)
+		assert.Equal("/health", (&ServerConfig{}).GetHealthCheckPath())
+	})
 
-func TestDefaultHealthCheckPath(t *testing.T) {
-	t.Parallel()
-	assert := assertions.New(t)
-	assert.Equal("/health", (&ServerConfig{}).GetHealthCheckPath())
-}
+	t.Run("default metrics configuration", func(t *testing.T) {
+		t.Parallel()
+		metrics := (&ServerConfig{}).GetMetrics()
+		assertions.NotNil(t, metrics)
+		assertions.Equal(t, "/metrics", metrics.Path)
+	})
 
-func TestDefaultMetrics(t *testing.T) {
-	t.Parallel()
-	assertions.NotNil(t, (&ServerConfig{}).GetMetrics())
-}
-
-func TestDefaultMetricsPath(t *testing.T) {
-	t.Parallel()
-	assertions.Equal(t, "/metrics", (&MetricsConfig{}).GetPath())
+	t.Run("default metrics path", func(t *testing.T) {
+		t.Parallel()
+		assertions.Equal(t, "/metrics", (&MetricsConfig{}).GetPath())
+	})
 }
