@@ -21,10 +21,16 @@ type GinAppConfig interface {
 }
 
 type ServerConfig struct {
-	Mode            string `json:"mode,omitempty"`
-	Port            int    `json:"port,omitempty"`
-	HealthcheckPath string `json:"healthcheck_path,omitempty"`
-	MetricsEnabled  bool   `json:"enable_metrics,omitempty"`
+	Mode            string         `json:"mode,omitempty"`
+	Port            int            `json:"port,omitempty"`
+	HealthcheckPath string         `json:"healthcheck_path,omitempty"`
+	MetricsEnabled  bool           `json:"enable_metrics,omitempty"`
+	Metrics         *MetricsConfig `json:"metrics,omitempty"`
+}
+
+type MetricsConfig struct {
+	Enabled bool   `json:"enabled,omitempty"`
+	Path    string `json:"path,omitempty"`
 }
 
 const DefaultHealthcheckPath = "/health"
@@ -64,6 +70,7 @@ type Setups interface {
 
 func New(configuration GinAppConfig, setups Setups) (*GinApp, error) {
 	logConfiguration := configuration.GetLogConfig()
+
 	if logConfiguration == nil {
 		logConfiguration = &LogConfig{
 			Level:  LogInfo,
@@ -150,8 +157,9 @@ func setupGinEngine(configuration GinAppConfig, setups Setups, logger *zap.Sugar
 	})
 
 	if setups != nil {
-		if configuration.GetServerConfig().MetricsEnabled {
-			err := setupMetrics(ginEngine, setups.ConfigureMetrics)
+		metricsConfiguration := configuration.GetServerConfig().Metrics
+		if metricsConfiguration != nil && metricsConfiguration.Enabled {
+			err := setupMetrics(ginEngine, metricsConfiguration, setups.ConfigureMetrics)
 			if err != nil {
 				return nil, err
 			}
@@ -166,9 +174,15 @@ func setupGinEngine(configuration GinAppConfig, setups Setups, logger *zap.Sugar
 	return ginEngine, nil
 }
 
-func setupMetrics(ginEngine *gin.Engine, configure func(*ginmetrics.Monitor) error) error {
+func setupMetrics(ginEngine *gin.Engine, configuration *MetricsConfig, configure func(*ginmetrics.Monitor) error) error {
 	monitor := ginmetrics.GetMonitor()
-	monitor.SetMetricPath("/metrics")
+
+	metricsPath := "/metrics"
+	if configuration.Path != "" {
+		metricsPath = configuration.Path
+	}
+
+	monitor.SetMetricPath(metricsPath)
 	err := configure(monitor)
 	if err != nil {
 		return err

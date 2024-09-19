@@ -18,7 +18,6 @@ func TestMetrics(t *testing.T) {
 	t.Run("disabled", func(t *testing.T) {
 		t.Parallel()
 		config := createTestConfig()
-		config.Server.MetricsEnabled = false
 
 		app, err := New(&config, testSetups())
 		if err != nil {
@@ -46,8 +45,10 @@ func TestMetrics(t *testing.T) {
 
 	t.Run("enabled with custom counter", func(t *testing.T) {
 		t.Parallel()
+		metricsPath := "/my-metrics"
 		config := createTestConfig()
-		config.Server.MetricsEnabled = true
+		config.Server.Metrics.Enabled = true
+		config.Server.Metrics.Path = metricsPath
 		metricName := "test_count"
 		setups := testSetups()
 		setups.configureMetrics = func(monitor *ginmetrics.Monitor) error {
@@ -77,7 +78,8 @@ func TestMetrics(t *testing.T) {
 
 		// Act
 		server := app.StartAsync()
-		response, err := http.Get(fmt.Sprintf("http://%s/metrics", server.Addr))
+		metricsURL := fmt.Sprintf("http://%s%s", server.Addr, metricsPath)
+		response, err := http.Get(metricsURL)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -94,7 +96,7 @@ func TestMetrics(t *testing.T) {
 		}
 		_ = response.Body.Close()
 
-		response, err = http.Get(fmt.Sprintf("http://%s/metrics", server.Addr))
+		response, err = http.Get(metricsURL)
 		if err != nil {
 			t.Fatal(err)
 		}
