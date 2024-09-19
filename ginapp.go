@@ -73,7 +73,10 @@ func (builder *Builder) setupGinEngine(config Config, logger *zap.SugaredLogger)
 	ginEngine.Use(ginzap.GinzapWithConfig(logger.Desugar(), &ginzap.Config{
 		TimeFormat: time.RFC3339,
 		UTC:        true,
-		SkipPaths:  []string{serverConfig.GetHealthCheckPath()},
+		SkipPaths: []string{
+			serverConfig.GetHealthCheckPath(),
+			serverConfig.GetMetrics().GetPath(),
+		},
 	}))
 	ginEngine.Use(ginzap.RecoveryWithZap(logger.Desugar(), true))
 	ginEngine.Use(
