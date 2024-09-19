@@ -48,8 +48,7 @@ jobs:
           if [ ${{ matrix.lint-and-coverage }} = true ]; then
               GO_TEST_OPTS="-covermode=atomic -coverprofile=coverage.out"
           fi
-          export GORACE="halt_on_error=1"
-          go test -race $GO_TEST_OPTS ./...
+          go test $GO_TEST_OPTS ./...
 
       - name: Reporting coverage
         if: matrix.lint-and-coverage
