@@ -21,6 +21,7 @@ type GinAppConfig interface {
 }
 
 type ServerConfig struct {
+	Mode            string `json:"mode,omitempty"`
 	Port            int    `json:"port,omitempty"`
 	HealthcheckPath string `json:"healthcheck_path,omitempty"`
 	MetricsEnabled  bool   `json:"enable_metrics,omitempty"`
@@ -74,10 +75,15 @@ func New(configuration GinAppConfig, setups Setups) (*GinApp, error) {
 		return nil, err
 	}
 
-	if logConfiguration.Level == LogDebug {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
+	serverConfig := configuration.GetServerConfig()
+	if serverConfig == nil {
+		serverConfig = &ServerConfig{
+			HealthcheckPath: DefaultHealthcheckPath,
+		}
+	}
+
+	if serverConfig.Mode != "" {
+		gin.SetMode(serverConfig.Mode)
 	}
 
 	ginEngine, _ := setupGinEngine(configuration, setups, logger)
