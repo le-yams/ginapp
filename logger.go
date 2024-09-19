@@ -2,7 +2,9 @@ package ginapp
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func setupLogger(config Config) (*zap.SugaredLogger, error) {
@@ -16,7 +18,11 @@ func setupLogger(config Config) (*zap.SugaredLogger, error) {
 	}
 
 	loggerConfig := zap.NewProductionConfig()
+	if config.GetServerConfig().Mode == gin.ReleaseMode {
+		loggerConfig = zap.NewDevelopmentConfig()
+	}
 	loggerConfig.Encoding = string(logConfig.Format)
+	loggerConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	switch logConfig.Level {
 	case LogDebug:
