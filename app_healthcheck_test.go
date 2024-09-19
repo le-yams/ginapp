@@ -1,22 +1,21 @@
-package tests
+package ginapp
 
 import (
 	"fmt"
-	"github.com/le-yams/ginapp"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStartedAppHealthcheck(t *testing.T) {
+func TestHealthcheck(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	config := createTestConfig()
 	customHealthCheckPath := "/healthz"
 	config.Server.HealthcheckPath = customHealthCheckPath
 
-	app, err := ginapp.New(&config, testSetups())
+	app, err := New(&config, testSetups())
 	if err != nil {
 		t.Fatal(err)
 	}

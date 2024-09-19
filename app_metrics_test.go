@@ -1,9 +1,8 @@
-package tests
+package ginapp
 
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/le-yams/ginapp"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"go.uber.org/zap"
 	"io"
@@ -20,7 +19,7 @@ func TestMetrics(t *testing.T) {
 		t.Parallel()
 		config := createTestConfig()
 
-		app, err := ginapp.New(&config, testSetups())
+		app, err := New(&config, testSetups())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -72,7 +71,7 @@ func TestMetrics(t *testing.T) {
 			})
 			return nil
 		}
-		app, err := ginapp.New(&config, setups)
+		app, err := New(&config, setups)
 		if err != nil {
 			t.Fatal(err)
 		}
