@@ -57,8 +57,9 @@ func (c TestConfig) GetLogConfig() *LogConfig {
 func createTestConfig() TestConfig {
 	return TestConfig{
 		Server: &ServerConfig{
-			Port: 0, // random port
-			Mode: gin.TestMode,
+			Port:    0, // random port
+			Mode:    gin.TestMode,
+			Metrics: &MetricsConfig{},
 		},
 	}
 }
