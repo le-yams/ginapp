@@ -58,6 +58,7 @@ func createTestConfig() TestConfig {
 	return TestConfig{
 		Server: &ServerConfig{
 			Port: 0, // random port
+			Mode: gin.TestMode,
 		},
 	}
 }
