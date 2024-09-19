@@ -19,7 +19,7 @@ func TestMetrics(t *testing.T) {
 		t.Parallel()
 		config := createTestConfig()
 
-		app, err := New(&config, testSetups())
+		app, err := WithConfiguration(&config).Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,28 +50,28 @@ func TestMetrics(t *testing.T) {
 		config.Server.Metrics.Enabled = true
 		config.Server.Metrics.Path = metricsPath
 		metricName := "test_count"
-		setups := testSetups()
-		setups.configureMetrics = func(monitor *ginmetrics.Monitor) error {
-			testMetric := &ginmetrics.Metric{
-				Type:        ginmetrics.Counter,
-				Name:        metricName,
-				Description: "Test counter",
-				Labels:      []string{},
-			}
-			return ginmetrics.GetMonitor().AddMetric(testMetric)
-		}
-		setups.configureGinEngine = func(engine *gin.Engine, logger *zap.SugaredLogger) error {
-			engine.GET("/test", func(c *gin.Context) {
-				metric := ginmetrics.GetMonitor().GetMetric(metricName)
-				err := metric.Inc([]string{})
-				if err != nil {
-					t.Fatal(err)
+		app, err := WithConfiguration(&config).
+			ConfigureGinEngine(func(engine *gin.Engine, logger *zap.SugaredLogger) error {
+				engine.GET("/test", func(c *gin.Context) {
+					metric := ginmetrics.GetMonitor().GetMetric(metricName)
+					err := metric.Inc([]string{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					c.Status(http.StatusOK)
+				})
+				return nil
+			}).
+			ConfigureMetrics(func(monitor *ginmetrics.Monitor) error {
+				testMetric := &ginmetrics.Metric{
+					Type:        ginmetrics.Counter,
+					Name:        metricName,
+					Description: "Test counter",
+					Labels:      []string{},
 				}
-				c.Status(http.StatusOK)
-			})
-			return nil
-		}
-		app, err := New(&config, setups)
+				return monitor.AddMetric(testMetric)
+			}).
+			Build()
 		if err != nil {
 			t.Fatal(err)
 		}

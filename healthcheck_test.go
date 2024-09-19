@@ -15,7 +15,7 @@ func TestHealthcheck(t *testing.T) {
 	customHealthCheckPath := "/healthz"
 	config.Server.HealthcheckPath = customHealthCheckPath
 
-	app, err := New(&config, testSetups())
+	app, err := WithConfiguration(&config).Build()
 	if err != nil {
 		t.Fatal(err)
 	}
