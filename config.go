@@ -1,5 +1,7 @@
 package ginapp
 
+import "github.com/gin-gonic/gin"
+
 const defaultMetricsPath = "/metrics"
 const defaultHealthcheckPath = "/health"
 
@@ -18,8 +20,8 @@ type ServerConfig struct {
 
 func defaultServerConfig() *ServerConfig {
 	return &ServerConfig{
-		Mode:            "release",
-		Port:            8080,
+		Mode:            gin.ReleaseMode,
+		Port:            0,
 		HealthcheckPath: defaultHealthcheckPath,
 		Metrics:         defaultMetricsConfig(),
 	}
@@ -48,6 +50,13 @@ func defaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
 		Path: defaultMetricsPath,
 	}
+}
+
+func (metricsConfig *MetricsConfig) GetPath() string {
+	if metricsConfig.Path == "" {
+		return defaultMetricsPath
+	}
+	return metricsConfig.Path
 }
 
 type LogConfig struct {
