@@ -50,7 +50,10 @@ func (builder *Builder) Build() (*App, error) {
 		return nil, err
 	}
 
-	ginEngine, _ := builder.setupGinEngine(config, logger)
+	ginEngine, err := builder.setupGinEngine(config, logger)
+	if err != nil {
+		return nil, fmt.Errorf("error setting up gin engine: %w", err)
+	}
 
 	return &App{
 		config:    config,
