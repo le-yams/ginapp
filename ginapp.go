@@ -52,7 +52,7 @@ func (builder *Builder) Build() (*App, error) {
 
 	ginEngine, err := builder.setupGinEngine(config, logger)
 	if err != nil {
-		return nil, fmt.Errorf("error setting up gin engine: %w", err)
+		return nil, err
 	}
 
 	return &App{
@@ -94,7 +94,7 @@ func (builder *Builder) setupGinEngine(config Config, logger *zap.SugaredLogger)
 
 	err := setupMetrics(ginEngine, serverConfig.GetMetrics(), builder.configureMetrics)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error configuring metrics: %w", err)
 	}
 
 	if builder.configureGinEngine != nil {
